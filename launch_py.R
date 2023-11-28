@@ -13,13 +13,13 @@ launchPythonScript <- function(csvFilePath) {
   
   #mv folder to good folder
   if (args[4] == "mse") {
-    command <- paste("mv", args[3], "simorghmse/")    
+    command <- paste("mv -f", args[3], "simorghmse/")    
     pythonScript <- "simorghmsecode/simorghMSE.py"
   } else if (args[4] == "ndt") {
-    command <- paste("mv", args[3], "simorghndt/")
+    command <- paste("mv -f", args[3], "simorghndt/")
     pythonScript <- "simorghndtcode/simorghNDT.py"
   } else if (args[4] == "shm") {
-    command <- paste("mv", args[3], "simorghshm/")
+    command <- paste("mv -f", args[3], "simorghshm/")
     pythonScript <- "simorghshmcode/simorghSHM.py"
   }
   

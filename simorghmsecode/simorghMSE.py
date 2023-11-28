@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
 
 from datetime import datetime, date
 
@@ -35,6 +33,7 @@ accountname = sys.argv[1]
 projectnamecode = sys.argv[2]
 industrytype = sys.argv[3]
 calctype = sys.argv[4]
+
 
 
 
@@ -231,6 +230,7 @@ else:
 # The main loop
 usedSTA ={}
 A = '-'.join([clientInfo.iloc[0].iloc[0], clientInfo.iloc[1].iloc[0], clientInfo.iloc[2].iloc[0], 'visualization']) +'.png'
+figpath = '-'.join([clientInfo.iloc[0].iloc[0], clientInfo.iloc[1].iloc[0], clientInfo.iloc[2].iloc[0], 'visualization']) +'.html'
 
 
 x, passive_plot_cnt = 0, 0
@@ -264,7 +264,6 @@ for phasenum in range(loopend):
                 ax.plot(chall[7])
                 ax.set_title('fig1', size= 15)
                 fig1 = plt.gcf()
-                
                 fig1.savefig(A, dpi=100)
                 fig1.savefig('fig-first.png', dpi=100)
                 passive_plot_cnt = 1

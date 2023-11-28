@@ -1,53 +1,91 @@
+
 library(shiny)
-library(shinydashboard)
 library(stringr)
 
 # Source the script with the launchPythonScript function
 source("launch_py.R")
 
-options(shiny.maxRequestSize = 5 * 1024^3) #5GB
+options(shiny.maxRequestSize = 5 * 1024^3) # 5GB
 
-ui <- dashboardPage(
-  dashboardHeader(title = "Zip File Uploader and Parameter Input"),
-  dashboardSidebar(),
-  dashboardBody(
-    fluidRow(
-      box(
-        title = "Upload and Unzip",
-        status = "primary",
-        solidHeader = TRUE,
-        collapsible = TRUE,
-        fileInput("fileInput", "Choose ZIP File", accept = c(".zip")),
-        textInput("folderName", "Project Name", ""),
-        actionButton("unzipButton", "Unzip File"),
-        textOutput("unzipStatus")
+
+ui <- fluidPage(
+  tags$head(
+    tags$style(HTML("
+      .centered {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      body { 
+        background-color: white !important; 
+      }
+      /* Other custom CSS */
+    "))
+  ),
+  titlePanel("Simorgh"),
+  fluidRow(
+    column(1),
+    column(4,
+      fileInput("fileInput", "Choose ZIP File", accept = c(".zip")),
+      textOutput("uploadStatus"),
+      uiOutput("unzipUI"), # UI for Unzip button will be rendered here
+      uiOutput("parameterInputUI"), # UI for parameters will be rendered here
+      br(),
+      br()
+  ),
+  column(7,
+       uiOutput("scriptRunUI"), # UI for script execution button and status
+       br(),
+       uiOutput("imageOutput") # UI for displaying the image
       )
-    ),
-    uiOutput("parameterInputUI"), # UI for parameters will be rendered here
-    uiOutput("scriptRunUI") # UI for script execution button
   )
 )
 
 server <- function(input, output, session) {
   # Reactive value to track if the file has been unzipped
   fileUnzipped <- reactiveVal(FALSE)
+  
+  fileUploaded <- reactiveVal(FALSE)
+  
+  scriptRunSuccessful <- reactiveVal(FALSE)
+  
+  folderName <- reactiveVal(FALSE)
+  
+  accountName <- reactiveVal(FALSE)
+  
+  industryType <- reactiveVal(FALSE)
+  
+  calculationType <- reactiveVal(FALSE)
+  
+  observe({
+    # Check if a file is uploaded
+    if (!is.null(input$fileInput)) {
+      fileUploaded(TRUE) # Set the reactive value to TRUE
+      output$uploadStatus <- renderText("File uploaded.")
+    }
+  })
 
+  output$unzipUI <- renderUI({
+    if (fileUploaded()) {
+      # Render the Unzip button
+      fluidRow(
+          textInput("folderName", "Project Name", ""),
+          actionButton("unzipButton", "Next"),
+          textOutput("unzipStatus")
+      )
+    }
+  })
+
+  
+  
   observeEvent(input$unzipButton, {
     req(input$fileInput)
 
-    
-    folderName <- str_pad(input$folderName, 8, side = "right", pad = "_")
-    #keep only 8 first characters
-    folderName <- substr(folderName, 1, 8)
-    
-    
+    # Progress bar
+    withProgress(message = 'Preparing data...', value = 0, {
+      folderName <- str_pad(input$folderName, 8, side = "right", pad = "_")
+      folderName <- substr(folderName, 1, 8)
 
-    # if (nchar(folderName) != 8) {
-    #   output$unzipStatus <- renderText("Error: The project name must be exactly 8 characters long.")
-    #   return()
-    # }
-
-    output$unzipStatus <- renderText({
       inFile <- input$fileInput
       destDir <- file.path(getwd(), folderName)
 
@@ -55,20 +93,21 @@ server <- function(input, output, session) {
         dir.create(destDir)
       }
 
+      setProgress(0.5)  # Update progress
+
       unzip(inFile$datapath, exdir = destDir)
-      fileUnzipped(TRUE) # Set the reactive value to TRUE
-      paste("File unzipped in directory:", destDir)
+
+      setProgress(1)  # Complete the progress
+      fileUnzipped(TRUE)
+
+      output$unzipStatus <- renderText(paste("Data is ready"))
     })
   })
+  
 
   output$parameterInputUI <- renderUI({
     if (fileUnzipped()) {
       fluidRow(
-        box(
-          title = "Input Parameters",
-          status = "primary",
-          solidHeader = TRUE,
-          collapsible = TRUE,
           textInput("accountname", "Account Name", ""),
           selectInput("industrytype", "Industry Type", choices = c("mse", "ndt", "shm")),
           selectInput("calculationtype", "Calculation Type", choices = c("passive", "realtime")),
@@ -81,7 +120,6 @@ server <- function(input, output, session) {
           textAreaInput("description", "Description", ""),
           actionButton("saveButton", "Save Parameters"),
           textOutput("saveStatus")
-        )
       )
     }
   })
@@ -97,9 +135,17 @@ server <- function(input, output, session) {
     #keep only 8 first characters
     accountName <- substr(accountName, 1, 8)
     
+    accountName(accountName)
+    
     folderName <- str_pad(input$folderName, 8, side = "right", pad = "_")
     #keep only 8 first characters
     folderName <- substr(folderName, 1, 8)
+    
+    folderName(folderName)
+    
+    industryType(input$industrytype)
+    
+    calculationType(input$calculationtype)
     
     
     #paste sampling and data length
@@ -129,7 +175,7 @@ server <- function(input, output, session) {
     write.csv(parameters, csvFilePath, row.names = TRUE, quote = FALSE)
 
   
-    output$saveStatus <- renderText(paste("Parameters saved in file:", csvFilePath))
+    output$saveStatus <- renderText(paste("Parameters saved"))
     
     # After saving, set paramsSaved to TRUE
     paramsSaved(TRUE)
@@ -139,29 +185,46 @@ server <- function(input, output, session) {
     output$scriptRunUI <- renderUI({
     if (paramsSaved()) {
       fluidRow(
-        box(
-          title = "Run Python Script",
-          status = "primary",
-          solidHeader = TRUE,
-          collapsible = TRUE,
-          actionButton("runScriptButton", "Run Python Script"),
+          actionButton("runScriptButton", "Run Modeling"),
           textOutput("scriptStatus")
-        )
       )
     }
   })
 
-    observeEvent(input$runScriptButton, {
-      # Assume csvFilePath is available here. Adjust this part as per your app's logic
-      tryCatch({
-        print("running")
-        launchPythonScript(csvFilePath())
-        print("runned")
-        output$scriptStatus <- renderText("Python script executed successfully.")
-      }, error = function(e) {
-        output$scriptStatus <- renderText(paste("Error in executing script:", e$message))
-      })
+  observeEvent(input$runScriptButton, {
+  # Check if the parameters have been saved
+  req(paramsSaved())
+
+  # Progress bar for the modeling process
+  withProgress(message = 'Running modeling script...', value = 0, {
+    # Set initial progress
+    setProgress(0.5)
+
+    # Run Python script
+    tryCatch({
+      launchPythonScript(csvFilePath())
+      scriptRunSuccessful(TRUE)
+      setProgress(1)  # Complete the progress
+      output$scriptStatus <- renderText("Script executed successfully.")
+    }, error = function(e) {
+      setProgress(1)  # Complete the progress even if there's an error
+      output$scriptStatus <- renderText(paste("Error in executing script:", e$message))
     })
+  })
+})
+
+  output$imageOutput <- renderUI({
+    if (scriptRunSuccessful()) {
+      
+      # Define a resource path for the image directory
+      
+      imageDir <- paste0(getwd(), "/simorghmse/", folderName(), "/", accountName(), "-",folderName(), "-", industryType(),  "-results")
+      
+      addResourcePath("externalImages", imageDir)
+
+      img(src = paste0("externalImages/", accountName(), "-", folderName(), "-", industryType(), "-visualization.png"), style = "width:100%; height:auto;")
+    }
+  })
 
 }
 
