@@ -14,10 +14,10 @@
 *.bin
 */.DS_Store
 */.ipynb_checkpoints
-*/.Rproj.user/
-*/.Rhistory
-*/.RData
-*/.Ruserdata
+*.Rproj.user/
+*.Rhistory
+*.RData
+*.Ruserdata
 */__pycache__
 *.pyc
 .Rproj.user
