@@ -9,3 +9,7 @@
 /simorghshm
 /simorghshmcode
 /test123.zip
+*.zip
+*.bin
+.DS_Store
+_pycache_
