@@ -1,4 +1,5 @@
 /env
+.vscode
 /simorgh-aws
 /simorgh-aws-instructions.docx
 /simorgh-aws.Rproj
